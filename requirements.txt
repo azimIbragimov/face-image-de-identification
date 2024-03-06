@@ -1,0 +1,12 @@
+numpy==1.26.4
+opencv_python==4.9.0.80
+opencv_python_headless==4.9.0.80
+pandas==2.2.1
+scikit-image==0.22.0
+torch==2.2.1
+torchvision==0.17.1
+tqdm==4.65.0
+lpips==0.1.4
+pytorch-msssim==1.0.0
+ninja==1.11.1.1
+matplotlib==3.8.3

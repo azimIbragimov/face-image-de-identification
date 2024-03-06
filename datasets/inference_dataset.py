@@ -20,3 +20,21 @@ class InferenceDataset(Dataset):
 		if self.transform:
 			from_im = self.transform(from_im)
 		return from_im
+
+
+
+
+class InferenceDatasetSingle(Dataset):
+
+	def __init__(self, x, opts, transform=None):
+		self.x = x 
+		self.transform = transform
+		self.opts = opts
+
+	def __len__(self):
+		return 1
+
+	def __getitem__(self, index):
+		if self.transform:
+			from_im = self.transform(self.x)
+		return from_im

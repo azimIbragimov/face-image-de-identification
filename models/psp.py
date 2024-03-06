@@ -4,13 +4,17 @@ This file defines the core research contribution
 import matplotlib
 matplotlib.use('Agg')
 import math
+from lpips import LPIPS
+
 
 import torch
+import torchvision
 from torch import nn
+from arcface_torch.backbones import get_model
 from models.encoders import psp_encoders
 from models.stylegan2.model import Generator
 from configs.paths_config import model_paths
-
+from pytorch_msssim import SSIM
 
 def get_keys(d, name):
 	if 'state_dict' in d:
@@ -66,8 +70,8 @@ class pSp(nn.Module):
 			else:
 				self.__load_latent_avg(ckpt, repeat=self.opts.n_styles)
 
-	def forward(self, x, resize=True, latent_mask=None, input_code=False, randomize_noise=True,
-	            inject_latent=None, return_latents=False, alpha=None):
+	def forward(self, x, id_loss_threshold, resize=True, latent_mask=None, input_code=False, randomize_noise=True,
+				inject_latent=None, return_latents=False, alpha=None):
 		if input_code:
 			codes = x
 		else:
@@ -79,7 +83,6 @@ class pSp(nn.Module):
 				else:
 					codes = codes + self.latent_avg.repeat(codes.shape[0], 1, 1)
 
-
 		if latent_mask is not None:
 			for i in latent_mask:
 				if inject_latent is not None:
@@ -89,15 +92,78 @@ class pSp(nn.Module):
 						codes[:, i] = inject_latent[:, i]
 				else:
 					codes[:, i] = 0
+		
+		
 
 		input_is_latent = not input_code
 		images, result_latent = self.decoder([codes],
-		                                     input_is_latent=input_is_latent,
-		                                     randomize_noise=randomize_noise,
-		                                     return_latents=return_latents)
+											 input_is_latent=input_is_latent,
+											 randomize_noise=randomize_noise,
+											 return_latents=return_latents)
 
-		if resize:
+		if not resize:
 			images = self.face_pool(images)
+		
+
+		# CHANGES: START
+		arcface = get_model("r50", fp16=False)
+		arcface.load_state_dict(torch.load("backbone.pth"))
+		arcface.cuda()
+		arcface.eval()
+
+		resize_transform = torchvision.transforms.Resize((112, 112))
+
+		MSELoss = torch.nn.MSELoss()
+		LPIPLoss = LPIPS(net='alex').cuda()
+		SSIMLoss = SSIM()
+
+		max_iter_number = 100
+		adjustable_iter_number = 6
+
+		w_apostrophe = [codes]
+		for n in range(max_iter_number):
+                    x_hat, _ = self.decoder([w_apostrophe[n]], input_is_latent=input_is_latent, randomize_noise=randomize_noise, return_latents=return_latents)
+                    x_resized, x_hat_resized = resize_transform(x), resize_transform(x_hat) 
+
+                    # Calculating Delta W_1
+               	    face_embeddings_x, face_embeddings_x_hat = arcface(x_resized).squeeze(), arcface(x_hat_resized).squeeze()	
+               	    cos = torch.nn.CosineSimilarity(dim=0, eps=1e-6)
+                    id_loss = (1 - cos(face_embeddings_x, face_embeddings_x_hat).mean())
+
+                    grad_id_loss_wrt_w_apostrophe = torch.autograd.grad(id_loss, w_apostrophe[n])
+               	    delta_w_1 = 0.02 * torch.sign(*grad_id_loss_wrt_w_apostrophe)
+                
+                    w_apostrophe[n] += delta_w_1
+                    
+                    for i in range(adjustable_iter_number):
+                        x_hat, _ = self.decoder([w_apostrophe[n]], input_is_latent=input_is_latent, randomize_noise=randomize_noise, return_latents=return_latents)
+                        x_resized, x_hat_resized = resize_transform(x), resize_transform(x_hat) 
+
+                        # Calculating Delta W_2
+                        mse = MSELoss(x_resized, x_hat_resized)
+                        lpips = LPIPLoss(x_resized, x_hat_resized)
+                        ssim = SSIMLoss(x_resized, x_hat_resized)
+                        mse_grad = torch.autograd.grad(mse, codes, retain_graph=True)[0]
+                        lpips_grad = torch.autograd.grad(lpips, codes, retain_graph=True)[0]
+                        ssim_grad = torch.autograd.grad(ssim, codes)[0]
+                        delta_w_2 = - 0.008 * (torch.sign(mse_grad) + torch.sign(lpips_grad) + torch.sign(ssim_grad))
+                                 
+                        w_apostrophe[n] += delta_w_2
+                    w_apostrophe.append(w_apostrophe[n] )
+                    x_hat, _ = self.decoder([w_apostrophe[n]], input_is_latent=input_is_latent, randomize_noise=randomize_noise, return_latents=return_latents)
+                    x_resized, x_hat_resized = resize_transform(x), resize_transform(x_hat) 
+                    face_embeddings_x, face_embeddings_x_hat = arcface(x_resized).squeeze(), arcface(x_hat_resized).squeeze()	
+                    id_loss = (1 - cos(face_embeddings_x, face_embeddings_x_hat).mean())
+    
+                    if id_loss > id_loss_threshold:
+                        break
+
+		if return_latents:
+			return x_hat, result_latent
+		else:
+			return x_hat
+		# CHANGES: END
+
 
 		if return_latents:
 			return images, result_latent
