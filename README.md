@@ -7,6 +7,8 @@
 <br>
 The proposed re-implementation can de-identify face images using adversarial perturbations in the feature space. The top row represents source images, the middle row shows results shown in the original paper, and the last row shows the results of our re-implementation. 
 </p>
+
+
 ## Description   
 Unnoficial implementation of [Face Image De-Identification By Feature Space Adversarial Perturbation](https://onlinelibrary.wiley.com/doi/epdf/10.1002/cpe.7554) with Pytorch
 
