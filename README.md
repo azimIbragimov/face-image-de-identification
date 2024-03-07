@@ -7,11 +7,8 @@
 <br>
 The proposed re-implementation can de-identify face images using adversarial perturbations in the feature space. The top row represents source images, the middle row shows results shown in the original paper, and the last row shows the results of our re-implementation. 
 </p>
-> Privacy leakage in images attracts increasing concerns these days, as photos uploaded to large social platforms are usually not processed by proper privacy protection mechanisms. Moreover, with advanced artificial intelligence (AI) tools such as deep neural network (DNN), an adversary can detect people's identities and collect other sensitive personal information from images at an unprecedented scale. In this paper, we introduce a novel face image de‐identification framework using adversarial perturbations in the feature space. Manipulating the feature space vector ensures the good transferability of our framework. Moreover, the proposed feature space adversarial perturbation generation algorithm can successfully protect the identity‐related information while ensuring the other attributes remain similar. Finally, we conduct extensive experiments on two face image datasets to evaluate the performance of the proposed method. Our results show that the proposed method can generate real‐looking privacy‐preserving images efficiently. Although our framework has only been tested on two real‐life face image datasets, it can be easily extended to other types of images.
-
 ## Description   
 Unnoficial implementation of [Face Image De-Identification By Feature Space Adversarial Perturbation](https://onlinelibrary.wiley.com/doi/epdf/10.1002/cpe.7554) with Pytorch
-
 
 
 ## Getting Started
@@ -21,23 +18,20 @@ Unnoficial implementation of [Face Image De-Identification By Feature Space Adve
 git clone https://github.com/azimIbragimov/face-image-de-identification.git
 cd face-image-de-identification
 ```
-- Dependencies:  
-We recommend running this repository using [Docker](//www.docker.com/) and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
- 
-All dependencies for defining the environment are provided in the Dockerfile
+- Dependencies:
+  We recommend running this repository using [Docker](//www.docker.com/) and [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+  Once you have installed Docker on your system, run the following CLI commands to install the image:
+  
+  ```
+  docker build -t face-image-de-identification .
+  ```
 
-Once you have installed Docker on your system, run the following CLI commands to install the image:
+  Congratulations, you have installed the image. Each time you want to access the image, run the following command:
 
-`
-docker build -t face-image-de-identification .
-`
-
-Congratulations, you have installed the image. Each time you want to access the image, run th following command
-
-`
-docker run --gpus all -v ./workspace -it face-image-deidentification
-cd /workspace
-`
+  ```
+  docker run --gpus all -v ./workspace -it face-image-deidentification
+  cd /workspace
+  ```
 
 
 ### Required pretrained Models
